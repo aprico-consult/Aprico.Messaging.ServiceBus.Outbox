@@ -1,0 +1,43 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".Build Properties.", ".Build Properties.", "{AE33B1A7-3408-4602-827F-1C0C5CFB58FD}"
+	ProjectSection(SolutionItems) = preProject
+		NuGet.config = NuGet.config
+		src\Directory.Build.props = src\Directory.Build.props
+		src\Directory.Packages.props = src\Directory.Packages.props
+		src\GlobalSuppressions.Tests.cs = src\GlobalSuppressions.Tests.cs
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".Solution Items.", ".Solution Items.", "{EC79FBC3-98CD-4A78-BF46-07E567F2C70F}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitignore = .gitignore
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aprico.Messaging.ServiceBus.Outbox", "src\Aprico.Messaging.ServiceBus.Outbox\Aprico.Messaging.ServiceBus.Outbox.csproj", "{63999287-535A-42FB-AC47-D38F708F410E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aprico.Messaging.ServiceBus.Outbox.Tests", "src\Aprico.Messaging.ServiceBus.Outbox.Tests\Aprico.Messaging.ServiceBus.Outbox.Tests.csproj", "{5027E7BE-3D8D-4395-925F-1C65216B7C1C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{63999287-535A-42FB-AC47-D38F708F410E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63999287-535A-42FB-AC47-D38F708F410E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63999287-535A-42FB-AC47-D38F708F410E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63999287-535A-42FB-AC47-D38F708F410E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5027E7BE-3D8D-4395-925F-1C65216B7C1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5027E7BE-3D8D-4395-925F-1C65216B7C1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5027E7BE-3D8D-4395-925F-1C65216B7C1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5027E7BE-3D8D-4395-925F-1C65216B7C1C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+   <PropertyGroup>
+      <AssemblyName>Aprico.Messaging.ServiceBus.Outbox</AssemblyName>
+      <RootNamespace>Aprico</RootNamespace>
+      <Description>Aprico Consultants' Distributed Application Libraries: Azure ServiceBus Transactional Outbox.</Description>
+   </PropertyGroup>
+
+   <PropertyGroup>
+      <RepositoryType>git</RepositoryType>
+      <RepositoryUrl>https://github.com/aprico-consult/Aprico.Messaging.ServiceBus.Outbox</RepositoryUrl>
+      <PublishRepositoryUrl>true</PublishRepositoryUrl>
+      <EmbedUntrackedSources>true</EmbedUntrackedSources>
+   </PropertyGroup>
+
+   <PropertyGroup>
+      <GeneratePackageOnBuild Condition=" '$(GeneratePackageOnBuild)' == '' ">false</GeneratePackageOnBuild>
+      <IsPackable>true</IsPackable>
+      <PackageId>$(AssemblyName)</PackageId>
+      <PackageDescription>$(Description)</PackageDescription>
+      <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+      <PackageTags>aprico distributed application library</PackageTags>
+      <IncludeSymbols>true</IncludeSymbols>
+      <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+   </PropertyGroup>
+
+   <ItemGroup>
+      <InternalsVisibleTo Include="$(AssemblyName).Tests"/>
+   </ItemGroup>
+
+   <ItemGroup>
+      <PackageReference Include="Microsoft.SourceLink.GitHub"/>
+   </ItemGroup>
+
+</Project>

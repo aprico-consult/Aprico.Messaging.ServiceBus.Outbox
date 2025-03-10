@@ -1,0 +1,60 @@
+<!--
+
+  Copyright © 2024 - 2025 Aprico Consultants
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+<!-- https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory#directorybuildprops-and-directorybuildtargets -->
+<Project>
+
+   <PropertyGroup>
+      <TargetFramework>net9.0</TargetFramework>
+      <ImplicitUsings>disable</ImplicitUsings>
+      <LangVersion>default</LangVersion>
+      <Nullable>enable</Nullable>
+   </PropertyGroup>
+
+   <PropertyGroup>
+      <AnalysisLevel>latest</AnalysisLevel>
+      <AnalysisMode>All</AnalysisMode>
+      <EnableNETAnalyzers>true</EnableNETAnalyzers>
+      <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+   </PropertyGroup>
+
+   <PropertyGroup>
+      <Company>Aprico Consultants</Company>
+      <Copyright>Copyright © 2024 - $([System.DateTime]::Now.Year) Aprico Consultants. All rights reserved.</Copyright>
+      <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+      <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+      <Product Condition="'$(TF_BUILD)' != 'true'">Aprico Consultants' Distributed Application Libraries (Local $(Configuration) Build)</Product>
+      <Product Condition="'$(TF_BUILD)' == 'true'">Aprico Consultants' Distributed Application Libraries ($(Configuration) Build)</Product>
+   </PropertyGroup>
+
+   <!-- https://learn.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#system-variables -->
+   <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
+      <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+      <Deterministic>true</Deterministic>
+   </PropertyGroup>
+
+   <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+      <Compile Include="$(MSBuildThisFileDirectory)GlobalSuppressions.Tests.cs"/>
+   </ItemGroup>
+
+   <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+      <Using Include="FluentAssertions"/>
+      <Using Include="FluentAssertions.FluentActions" Static="True"/>
+      <Using Include="Xunit"/>
+   </ItemGroup>
+
+</Project>
