@@ -29,7 +29,15 @@
    </ItemGroup>
 
    <ItemGroup>
+      <PackageReference Include="Aprico.Messaging.Abstractions"/>
+      <PackageReference Include="Aprico.Messaging.ServiceBus.Xml"/>
+      <PackageReference Include="Aprico.Messaging.Xml"/>
+      <PackageReference Include="Azure.Messaging.ServiceBus"/>
+      <PackageReference Include="Be.Stateless.Extensions"/>
+      <PackageReference Include="Microsoft.Data.SqlClient"/>
+      <PackageReference Include="Microsoft.Extensions.Options"/>
       <PackageReference Include="Microsoft.SourceLink.GitHub"/>
+      <PackageReference Include="System.Linq.Async"/>
    </ItemGroup>
 
 </Project>
