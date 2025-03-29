@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aprico.Messaging.ServiceBus
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aprico.Messaging.ServiceBus.Outbox.Tests", "src\Aprico.Messaging.ServiceBus.Outbox.Tests\Aprico.Messaging.ServiceBus.Outbox.Tests.csproj", "{5027E7BE-3D8D-4395-925F-1C65216B7C1C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aprico.Messaging.ServiceBus.Outbox.Migrations", "src\Aprico.Messaging.ServiceBus.Outbox.Migrations\Aprico.Messaging.ServiceBus.Outbox.Migrations.csproj", "{CD998B3E-28BC-425D-A43C-CF6371F7707F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,5 +41,9 @@ Global
 		{5027E7BE-3D8D-4395-925F-1C65216B7C1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5027E7BE-3D8D-4395-925F-1C65216B7C1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5027E7BE-3D8D-4395-925F-1C65216B7C1C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CD998B3E-28BC-425D-A43C-CF6371F7707F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CD998B3E-28BC-425D-A43C-CF6371F7707F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CD998B3E-28BC-425D-A43C-CF6371F7707F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CD998B3E-28BC-425D-A43C-CF6371F7707F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
