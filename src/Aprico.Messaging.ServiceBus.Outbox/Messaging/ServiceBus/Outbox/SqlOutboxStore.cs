@@ -23,29 +23,33 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Aprico.Messaging.ServiceBus.Data.Extensions;
 using Aprico.Messaging.ServiceBus.Extensions;
+using Aprico.Messaging.ServiceBus.Outbox.Data.Extensions;
 using Aprico.Messaging.ServiceBus.Outbox.Settings;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Options;
 
 namespace Aprico.Messaging.ServiceBus.Outbox;
 
-/// <summary>Background worker responsible for dequeuing <see cref="ServiceBusMessage"/> instances from the outbox for dispatch.</summary>
+/// <summary>Allows dequeuing of <see cref="ServiceBusMessage"/> instances stored in the SQL Server–backed outbox store.</summary>
 /// <remarks>
 /// <para>
-/// This component is part of the transactional outbox pattern and is typically used by a background service or job
-/// scheduler. It dequeues messages that were previously enqueued using <see cref="IOutbox{TMessage}"/>, applying limits on
-/// both message count and total size as defined in <see cref="OutboxSettings"/>.
+/// This component is part of the transactional outbox pattern and is intended to be used by a background delivery service to
+/// retrieve messages previously enqueued via <see cref="SqlOutbox"/>. It enforces limits on the number and total accumulated size
+/// of dequeued messages, as configured via <see cref="OutboxSettings"/>.
 /// </para>
-/// <para>Messages returned by this worker are grouped by destination aggregate and are routed to the same Azure Service Bus queue.</para>
+/// <para>
+/// Messages returned by this store are grouped by destination aggregate and are intended to be dispatched to the same Azure
+/// Service Bus queue.
+/// </para>
 /// </remarks>
-/// <seealso cref="ServiceBusMessage"/>
+/// <seealso cref="IOutboxStore{TMessage}"/>
 /// <seealso cref="OutboxSettings"/>
-/// <seealso cref="OutboxClient"/>
-public class OutboxStore : IOutboxStore<ServiceBusMessage>
+/// <seealso cref="ServiceBusMessage"/>
+/// <seealso cref="SqlOutbox"/>
+public class SqlOutboxStore : IOutboxStore<ServiceBusMessage>
 {
-	public OutboxStore(IOptions<OutboxSettings> settings)
+	public SqlOutboxStore(IOptions<OutboxSettings> settings)
 	{
 		ArgumentNullException.ThrowIfNull(settings);
 		_settings = settings.Value;
@@ -53,7 +57,7 @@ public class OutboxStore : IOutboxStore<ServiceBusMessage>
 
 	#region IOutboxStore<ServiceBusMessage> Members
 
-	/// <summary>Dequeues and dispatches a collection of <see cref="ServiceBusMessage"/> instances from the outbox.</summary>
+	/// <summary>Dequeues a collection of <see cref="ServiceBusMessage"/> instances from the SQL Server–backed outbox store.</summary>
 	/// <param name="transaction">The active database transaction used for the dequeue operation.</param>
 	/// <param name="messageCount">
 	/// The maximum number of messages to retrieve. Defaults to <see cref="OutboxSettings.MaxDequeueCount"/>
@@ -64,17 +68,17 @@ public class OutboxStore : IOutboxStore<ServiceBusMessage>
 	/// A task that returns a tuple containing the name of the destination aggregate and the dequeued messages. If no messages
 	/// are available, the result is <c>default</c>.
 	/// </returns>
-	/// <exception cref="ArgumentNullException">Thrown if <paramref name="transaction"/> is <see langword="null"/>.</exception>
+	/// <exception cref="ArgumentNullException">Thrown if <paramref name="transaction"/> is <c>null</c>.</exception>
 	/// <exception cref="InvalidOperationException">Thrown if one or more messages are invalid.</exception>
 	/// <remarks>
 	/// <para>
-	/// This operation retrieves messages associated with a single destination aggregate. All messages will be dispatched to the
-	/// same Azure Service Bus queue.
+	/// This operation retrieves messages associated with a single destination aggregate. All messages are intended to be
+	/// dispatched to the same Azure Service Bus queue.
 	/// </para>
 	/// <para>
-	/// Only messages whose combined header and body size, when accumulated across the dequeued set, do not exceed the configured
-	/// <see cref="OutboxSettings.MaxDequeueSize"/> will be dequeued. Note that any individual message that exceeds this limit on its
-	/// own will remain in the outbox. Furthermore, each message is validated before dispatch to ensure it contains the required
+	/// Only messages whose combined header and body sizes, accumulated across the entire dequeued set, do not exceed the
+	/// configured <see cref="OutboxSettings.MaxDequeueSize"/> will be dequeued. Any individual message that exceeds this limit on its
+	/// own will remain in the outbox. Furthermore, each message is validated before being returned to ensure it contains the required
 	/// metadata and does not exceed the configured size limit.
 	/// </para>
 	/// </remarks>
@@ -102,10 +106,9 @@ public class OutboxStore : IOutboxStore<ServiceBusMessage>
 		await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 		if (await reader.ReadAsync(cancellationToken))
 		{
-			var entityName = reader.GetString(ordinal: 0);
+			var destinationAggregate = reader.GetString(ordinal: 0);
 			// @formatter:wrap_chained_method_calls chop_if_long
-			// TODO return a ServiceBusMessageBatch though return type is IEnumerable<ServiceBusMessage>
-			return (entityName, await BuildMessagesAsync(reader, cancellationToken).ToArrayAsync(cancellationToken));
+			return (destinationAggregate, await BuildMessagesAsync(reader, cancellationToken).ToArrayAsync(cancellationToken));
 			// @formatter:wrap_chained_method_calls restore
 		}
 		return default;

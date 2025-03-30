@@ -20,11 +20,11 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 
-namespace Aprico.Messaging.ServiceBus.Data;
+namespace Aprico.Data;
 
-internal abstract class EnumerableDataReader<TSource> : IDataReader
+internal abstract class EnumeratorDataReader<TSource> : IDataReader
 {
-	internal EnumerableDataReader(IEnumerator<TSource> source, int fieldCount)
+	internal EnumeratorDataReader(IEnumerator<TSource> source, int fieldCount)
 	{
 		_source = source;
 		FieldCount = fieldCount;

@@ -1,13 +1,13 @@
 #region Copyright & License
 
 // Copyright © 2024 - 2025 Aprico Consultants
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 // http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,11 +24,19 @@ using Aprico.Messaging.ServiceBus.Extensions;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Data.SqlClient;
 
-namespace Aprico.Messaging.ServiceBus.Data.Extensions;
+namespace Aprico.Messaging.ServiceBus.Outbox.Data.Extensions;
 
 [SuppressMessage("ReSharper", "UseRawString")]
 internal static class DbTransactionExtensions
 {
+	internal static SqlBulkCopy CreateBulkEnqueuingCommand(this DbTransaction transaction)
+	{
+		ArgumentNullException.ThrowIfNull(transaction.Connection);
+		return new SqlBulkCopy((SqlConnection) transaction.Connection, SqlBulkCopyOptions.KeepIdentity, (SqlTransaction) transaction) {
+			DestinationTableName = "[outbox].[Messages]"
+		};
+	}
+
 	[SuppressMessage("ReSharper", "StringLiteralTypo")]
 	internal static DbCommand CreateDequeuingCommand(this DbTransaction transaction, int maxMessageCount, int maxBatchSize)
 	{
@@ -40,21 +48,21 @@ internal static class DbTransactionExtensions
 		// - Such messages, even if directly inserted into the database, will not be processed
 		// - Effectively, over-sized messages are permanently excluded from dequeuing
 		const string DEQUEUE_COMMAND = @"
-WITH [DestinationAggregates] ([DestinationAggregate]) AS (
+WITH [Aggregates] ([Aggregate]) AS (
 	SELECT TOP 1 [DestinationAggregate]
-	FROM [outbox].[Queue] Q WITH (READPAST)
-	WHERE (LEN(Q.[Body]) + LEN(Q.[Headers])) <= @maxBatchSize
+	FROM [outbox].[Messages] M WITH (READPAST)
+	WHERE (LEN(M.[Body]) + LEN(M.[Headers])) <= @maxBatchSize
 	ORDER BY [Timestamp], [Id]
 ),
-[Messages] ([DestinationAggregate], [Timestamp], [Id], [BatchSize]) AS (
-	SELECT TOP (@maxMessageCount) Q.[DestinationAggregate], Q.[Timestamp], Q.[Id], SUM(LEN(Q.[Body]) + LEN(Q.[Headers])) OVER (PARTITION BY Q.[DestinationAggregate] ORDER BY Q.[Timestamp], Q.[Id]) AS [BatchSize]
-	FROM [outbox].[Queue] Q WITH (READPAST) INNER JOIN [DestinationAggregates] E ON Q.DestinationAggregate = E.[DestinationAggregate]
-	WHERE (LEN(Q.[Body]) + LEN(Q.[Headers])) <= @maxBatchSize
+[AggregateMessageBatch] ([DestinationAggregate], [Timestamp], [Id], [BatchSize]) AS (
+	SELECT TOP (@maxMessageCount) M.[DestinationAggregate], M.[Timestamp], M.[Id], SUM(LEN(M.[Body]) + LEN(M.[Headers])) OVER (PARTITION BY M.[DestinationAggregate] ORDER BY M.[Timestamp], M.[Id]) AS [BatchSize]
+	FROM [outbox].[Messages] M WITH (READPAST) INNER JOIN [Aggregates] A ON M.[DestinationAggregate] = A.[Aggregate]
+	WHERE (LEN(M.[Body]) + LEN(M.[Headers])) <= @maxBatchSize
 	ORDER BY [Timestamp], [Id]
 )
-DELETE [outbox].[Queue]
+DELETE [outbox].[Messages]
 OUTPUT DELETED.[DestinationAggregate], DELETED.[Id], DELETED.[Headers], DELETED.[Body], DELETED.[Timestamp]
-FROM [outbox].[Queue] Q INNER JOIN [Messages] M ON Q.[Id] = M.[Id]
+FROM [outbox].[Messages] M INNER JOIN [AggregateMessageBatch] AM ON M.[Id] = AM.[Id]
 WHERE M.[BatchSize] <= @maxBatchSize
 ";
 		var command = transaction.CreateCommand(DEQUEUE_COMMAND);
@@ -66,7 +74,7 @@ WHERE M.[BatchSize] <= @maxBatchSize
 	internal static DbCommand CreateEnqueuingCommand(this DbTransaction transaction, string destinationAggregate, ServiceBusMessage message)
 	{
 		const string ENQUEUE_COMMAND = @"
-INSERT INTO [outbox].[Queue] ([Id], [DestinationAggregate], [Headers], [Body], [Timestamp])
+INSERT INTO [outbox].[Messages] ([Id], [DestinationAggregate], [Headers], [Body], [Timestamp])
 VALUES (@id, @destinationAggregate, @headers, @body, @timestamp)
 ";
 
@@ -78,26 +86,26 @@ VALUES (@id, @destinationAggregate, @headers, @body, @timestamp)
 			.AddParameter("@body", message.Body.ToString())
 			.AddParameter("@timestamp", message.GetTimestamp());
 		return command;
+		// @formatter:wrap_chained_method_calls restore
 	}
 
-	internal static SqlBulkCopy CreateSqlBulkCopy(this IDbTransaction transaction)
-	{
-		ArgumentNullException.ThrowIfNull(transaction.Connection);
-		return new SqlBulkCopy((SqlConnection) transaction.Connection, SqlBulkCopyOptions.KeepIdentity, (SqlTransaction) transaction) {
-			DestinationTableName = "outbox.Queue"
-		};
-	}
-
+	[SuppressMessage("Security", "CA2100:Review SQL queries for security vulnerabilities")]
 	private static DbCommand CreateCommand(this DbTransaction transaction, string commandText)
 	{
-		return (DbCommand) ((IDbTransaction) transaction).CreateCommand(commandText);
+		ArgumentNullException.ThrowIfNull(transaction.Connection);
+		var command = transaction.Connection.CreateCommand();
+		command.CommandText = commandText;
+		command.CommandType = CommandType.Text;
+		command.Transaction = transaction;
+		return command;
 	}
 
-	private static IDbCommand CreateCommand(this IDbTransaction transaction, string commandText)
+	private static IDbCommand AddParameter(this IDbCommand command, string parameterName, object value)
 	{
-		ArgumentNullException.ThrowIfNull(transaction.Connection);
-		var command = transaction.Connection.CreateCommand(commandText);
-		command.Transaction = transaction;
+		var parameter = command.CreateParameter();
+		parameter.ParameterName = parameterName;
+		parameter.Value = value;
+		command.Parameters.Add(parameter);
 		return command;
 	}
 }
