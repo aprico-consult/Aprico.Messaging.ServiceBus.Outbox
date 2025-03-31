@@ -37,7 +37,7 @@ internal class ServiceBusMessageDataReader : EnumeratorDataReader<ServiceBusMess
 	{
 		// @formatter:wrap_chained_method_calls chop_if_long
 		return index switch {
-			0 => _source.Current.MessageId,
+			0 => Guid.Parse(_source.Current.MessageId), // TODO !! fix inconsistencies: ServiceBusMessageAssembler expects a string but SQL outbox enforces a Guid
 			1 => _destinationAggregate,
 			2 => _source.Current.ApplicationProperties.ToJson().ToString(),
 			3 => _source.Current.Body.ToString(),

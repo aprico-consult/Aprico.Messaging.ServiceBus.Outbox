@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+   <PropertyGroup>
+      <AssemblyName>Aprico.Messaging.ServiceBus.Outbox.Integration.Tests</AssemblyName>
+      <RootNamespace>Aprico</RootNamespace>
+      <Description>Aprico Consultants' Distributed Application Libraries: Integration Tests for Azure ServiceBus Transactional Outbox.</Description>
+      <IsPackable>false</IsPackable>
+   </PropertyGroup>
+
+   <ItemGroup>
+      <ProjectReference Include="..\Aprico.Messaging.ServiceBus.Outbox.Migrations\Aprico.Messaging.ServiceBus.Outbox.Migrations.csproj"/>
+      <ProjectReference Include="..\Aprico.Messaging.ServiceBus.Outbox.Tests\Aprico.Messaging.ServiceBus.Outbox.Tests.csproj"/>
+      <ProjectReference Include="..\Aprico.Messaging.ServiceBus.Outbox\Aprico.Messaging.ServiceBus.Outbox.csproj"/>
+   </ItemGroup>
+
+   <ItemGroup>
+      <PackageReference Include="Aprico.Unit"/>
+      <PackageReference Include="AutoFixture"/>
+      <PackageReference Include="AutoFixture.AutoMoq"/>
+      <PackageReference Include="AutoFixture.Xunit2"/>
+      <PackageReference Include="coverlet.collector"/>
+      <PackageReference Include="FluentAssertions"/>
+      <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer"/>
+      <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+      <PackageReference Include="Moq"/>
+      <PackageReference Include="Testcontainers.MsSql"/>
+      <PackageReference Include="Testcontainers.Xunit"/>
+      <PackageReference Include="xunit"/>
+      <PackageReference Include="xunit.analyzers"/>
+      <PackageReference Include="xunit.runner.visualstudio"/>
+   </ItemGroup>
+
+</Project>
