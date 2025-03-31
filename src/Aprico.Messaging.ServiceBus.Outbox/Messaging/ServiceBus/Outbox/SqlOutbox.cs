@@ -19,6 +19,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using Aprico.Messaging.ServiceBus.Extensions;
@@ -49,6 +50,7 @@ namespace Aprico.Messaging.ServiceBus.Outbox;
 /// <seealso cref="OutboxSettings"/>
 /// <seealso cref="ServiceBusMessage"/>
 /// <seealso cref="SqlOutboxStore"/>
+[SuppressMessage("ReSharper", "ClassNeverInstantiated.Global", Justification = "Public API.")]
 public class SqlOutbox : IOutbox<ServiceBusMessage>
 {
 	public SqlOutbox(IOptions<OutboxSettings> settings)
