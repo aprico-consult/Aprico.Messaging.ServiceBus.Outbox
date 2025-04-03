@@ -33,60 +33,57 @@ internal static class DbTransactionExtensions
 	{
 		ArgumentNullException.ThrowIfNull(transaction.Connection);
 		return new SqlBulkCopy((SqlConnection) transaction.Connection, SqlBulkCopyOptions.KeepIdentity, (SqlTransaction) transaction) {
-			DestinationTableName = "[outbox].[Messages]"
+			DestinationTableName = $"[{Messages.SCHEMA}].[{nameof(Messages)}]"
 		};
 	}
 
 	[SuppressMessage("ReSharper", "StringLiteralTypo")]
-	internal static DbCommand CreateDequeuingCommand(this DbTransaction transaction, int maxMessageCount, int maxBatchSize)
+	internal static DbCommand CreateDequeuingCommand(this DbTransaction transaction, int maxDequeueCount, int maxDequeueSize)
 	{
+		// Ordering by Timestamp and Id ensures deterministic sequencing of messages, even when timestamps are identical.
+		// The dequeuing logic prioritizes the subject associated with the message holding the earliest Timestamp, while
+		// explicitly skipping any message whose size exceeds maxDequeueSize. This constraint serves as a safeguard against
+		// indefinite stalling, which could occur if the oldest subject contains a single over-sized message.
+		// Likely a message manually inserted into the SQL Outbox Store... *sigh*
 		// https://dba.stackexchange.com/questions/42985/running-total-to-the-previous-row
-		// Ordering by Timestamp and Id ensures a consistent sequence when multiple messages share the same timestamp
-		// The dequeuing process prioritizes the oldest entity while implementing a safety mechanism:
-		// - Messages exceeding the MAX_MESSAGE_SIZE limit are deliberately skipped
-		// - This prevents potential infinite dequeuing stalls caused by over-sized messages
-		// - Such messages, even if directly inserted into the database, will not be processed
-		// - Effectively, over-sized messages are permanently excluded from dequeuing
-		const string DEQUEUE_COMMAND = @"
-WITH [Aggregates] ([Aggregate]) AS (
-	SELECT TOP 1 [DestinationAggregate]
-	FROM [outbox].[Messages] M WITH (READPAST)
-	WHERE (LEN(M.[Body]) + LEN(M.[Headers])) <= @maxBatchSize
-	ORDER BY [Timestamp], [Id]
+		const string DEQUEUE_COMMAND = $@"
+WITH [OldestMessage] ([{nameof(Messages.Subject)}]) AS (
+   SELECT TOP 1 [{nameof(Messages.Subject)}]
+   FROM [{Messages.SCHEMA}].[{nameof(Messages)}] M WITH (READPAST)
+   WHERE (LEN(M.[{nameof(Messages.Body)}]) + LEN(M.[{nameof(Messages.Headers)}])) <= @maxDequeueSize
+   ORDER BY [{nameof(Messages.Timestamp)}], [{nameof(Messages.Id)}]
 ),
-[AggregateMessageBatch] ([DestinationAggregate], [Timestamp], [Id], [BatchSize]) AS (
-	SELECT TOP (@maxMessageCount) M.[DestinationAggregate], M.[Timestamp], M.[Id], SUM(LEN(M.[Body]) + LEN(M.[Headers])) OVER (PARTITION BY M.[DestinationAggregate] ORDER BY M.[Timestamp], M.[Id]) AS [BatchSize]
-	FROM [outbox].[Messages] M WITH (READPAST) INNER JOIN [Aggregates] A ON M.[DestinationAggregate] = A.[Aggregate]
-	WHERE (LEN(M.[Body]) + LEN(M.[Headers])) <= @maxBatchSize
-	ORDER BY [Timestamp], [Id]
+[MessageBatch] ([{nameof(Messages.Subject)}], [{nameof(Messages.Timestamp)}], [{nameof(Messages.Id)}], [DequeueSize]) AS (
+   SELECT TOP (@maxDequeueCount) M.[{nameof(Messages.Subject)}], M.[{nameof(Messages.Timestamp)}], M.[{nameof(Messages.Id)}],
+      SUM(LEN(M.[{nameof(Messages.Body)}]) + LEN(M.[{nameof(Messages.Headers)}])) OVER (PARTITION BY M.[{nameof(Messages.Subject)}] ORDER BY M.[{nameof(Messages.Timestamp)}], M.[{nameof(Messages.Id)}]) AS [DequeueSize]
+   FROM [{Messages.SCHEMA}].[{nameof(Messages)}] M WITH (READPAST) INNER JOIN [OldestMessage] ON M.[{nameof(Messages.Subject)}] = [OldestMessage].[{nameof(Messages.Subject)}]
+   WHERE (LEN(M.[{nameof(Messages.Body)}]) + LEN(M.[{nameof(Messages.Headers)}])) <= @maxDequeueSize
+   ORDER BY [{nameof(Messages.Timestamp)}], [{nameof(Messages.Id)}]
 )
-DELETE [outbox].[Messages]
-OUTPUT DELETED.[DestinationAggregate], DELETED.[Id], DELETED.[Headers], DELETED.[Body], DELETED.[Timestamp]
-FROM [outbox].[Messages] M INNER JOIN [AggregateMessageBatch] AM ON M.[Id] = AM.[Id]
-WHERE M.[BatchSize] <= @maxBatchSize
+DELETE [{Messages.SCHEMA}].[{nameof(Messages)}]
+OUTPUT DELETED.[{nameof(Messages.Subject)}], DELETED.[{nameof(Messages.Id)}], DELETED.[{nameof(Messages.Headers)}], DELETED.[{nameof(Messages.Body)}], DELETED.[{nameof(Messages.Timestamp)}]
+FROM [{Messages.SCHEMA}].[{nameof(Messages)}] M INNER JOIN [MessageBatch] AM ON M.[{nameof(Messages.Id)}] = AM.[{nameof(Messages.Id)}]
+WHERE M.[DequeueSize] <= @maxDequeueSize
 ";
 		var command = transaction.CreateCommand(DEQUEUE_COMMAND);
-		command.AddParameter("@maxMessageCount", maxMessageCount)
-			.AddParameter("@maxBatchSize", maxBatchSize);
+		command.AddParameter("@maxDequeueCount", maxDequeueCount)
+			.AddParameter("@maxDequeueSize", maxDequeueSize);
 		return command;
 	}
 
-	internal static DbCommand CreateEnqueuingCommand(this DbTransaction transaction, string destinationAggregate, ServiceBusMessage message)
+	internal static DbCommand CreateEnqueuingCommand(this DbTransaction transaction, string subject, ServiceBusMessage message)
 	{
-		const string ENQUEUE_COMMAND = @"
-INSERT INTO [outbox].[Messages] ([Id], [DestinationAggregate], [Headers], [Body], [Timestamp])
-VALUES (@id, @destinationAggregate, @headers, @body, @timestamp)
+		const string ENQUEUE_COMMAND = $@"
+INSERT INTO [{Messages.SCHEMA}].[{nameof(Messages)}] ([{nameof(Messages.Id)}], [{nameof(Messages.Subject)}], [{nameof(Messages.Headers)}], [{nameof(Messages.Body)}], [{nameof(Messages.Timestamp)}])
+VALUES (@id, @subject, @headers, @body, @timestamp)
 ";
-
-		// @formatter:wrap_chained_method_calls chop_if_long
 		var command = transaction.CreateCommand(ENQUEUE_COMMAND);
 		command.AddParameter("@id", message.MessageId)
-			.AddParameter("@destinationAggregate", destinationAggregate)
-			.AddParameter("@headers", message.ApplicationProperties.ToJson().ToString())
+			.AddParameter("@subject", subject) // @formatter:wrap_chained_method_calls chop_if_long
+			.AddParameter("@headers", message.ApplicationProperties.ToJson().ToString()) // @formatter:wrap_chained_method_calls restore
 			.AddParameter("@body", message.Body.ToString())
 			.AddParameter("@timestamp", message.GetTimestamp());
 		return command;
-		// @formatter:wrap_chained_method_calls restore
 	}
 
 	[SuppressMessage("Security", "CA2100:Review SQL queries for security vulnerabilities")]

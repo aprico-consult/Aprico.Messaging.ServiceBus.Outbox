@@ -30,6 +30,13 @@
    </ItemGroup>
 
    <ItemGroup>
+      <ProjectReference Include="..\Aprico.Messaging.ServiceBus.Outbox.Migrations\Aprico.Messaging.ServiceBus.Outbox.Migrations.csproj">
+         <PrivateAssets>all</PrivateAssets>
+         <IncludeAssets>compile</IncludeAssets>
+      </ProjectReference>
+   </ItemGroup>
+
+   <ItemGroup>
       <PackageReference Include="Aprico.Messaging.Abstractions"/>
       <PackageReference Include="Aprico.Messaging.ServiceBus.Xml"/>
       <PackageReference Include="Aprico.Messaging.Xml"/>

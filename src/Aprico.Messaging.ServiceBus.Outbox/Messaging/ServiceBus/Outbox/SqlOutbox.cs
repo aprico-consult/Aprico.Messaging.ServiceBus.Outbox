@@ -63,12 +63,12 @@ public class SqlOutbox : IOutbox<ServiceBusMessage>
 
 	/// <summary>Enqueues a single <see cref="ServiceBusMessage"/> into the outbox as part of the specified database transaction.</summary>
 	/// <param name="transaction">The database transaction that the enqueue operation will participate in.</param>
-	/// <param name="destinationAggregate">The name of the destination aggregate the message is intended for.</param>
+	/// <param name="subject">The subject or topic to which pertain the messages.</param>
 	/// <param name="message">The <see cref="ServiceBusMessage"/> to enqueue.</param>
 	/// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
 	/// <returns>A task representing the asynchronous enqueue operation.</returns>
 	/// <exception cref="ArgumentNullException">Thrown if <paramref name="transaction"/> or <paramref name="message"/> is <c>null</c>.</exception>
-	/// <exception cref="ArgumentException">Thrown if <paramref name="destinationAggregate"/> is null or empty.</exception>
+	/// <exception cref="ArgumentException">Thrown if <paramref name="subject"/> is null or empty.</exception>
 	/// <exception cref="InvalidOperationException">Thrown if the message is invalid or could not be persisted to the outbox.</exception>
 	/// <remarks>
 	/// The message is validated during enqueueing to ensure it contains the required metadata and does not exceed the
@@ -78,13 +78,13 @@ public class SqlOutbox : IOutbox<ServiceBusMessage>
 	/// <seealso cref="OutboxSettings"/>
 	/// <seealso cref="ServiceBusMessage"/>
 	/// <seealso cref="SqlOutboxStore"/>
-	public async Task EnqueueAsync(DbTransaction transaction, string destinationAggregate, ServiceBusMessage message, CancellationToken cancellationToken = default)
+	public async Task EnqueueAsync(DbTransaction transaction, string subject, ServiceBusMessage message, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(transaction);
-		ArgumentException.ThrowIfNullOrEmpty(destinationAggregate);
+		ArgumentException.ThrowIfNullOrEmpty(subject);
 		ArgumentNullException.ThrowIfNull(message);
 
-		await using var command = transaction.CreateEnqueuingCommand(destinationAggregate, message.Validate(_settings.MaxMessageSize));
+		await using var command = transaction.CreateEnqueuingCommand(subject, message.Validate(_settings.MaxMessageSize));
 		var affectedRowCount = await command.ExecuteNonQueryAsync(cancellationToken);
 		if (affectedRowCount != 1) throw new InvalidOperationException($"{nameof(ServiceBusMessage)} enqueueing failure, {affectedRowCount} rows have been inserted.");
 	}
@@ -94,12 +94,12 @@ public class SqlOutbox : IOutbox<ServiceBusMessage>
 	/// transaction.
 	/// </summary>
 	/// <param name="transaction">The database transaction that the enqueue operation will participate in.</param>
-	/// <param name="destinationAggregate">The name of the destination aggregate the messages are intended for.</param>
+	/// <param name="subject">The subject or topic to which pertain the collection of messages.</param>
 	/// <param name="messages">The collection of <see cref="ServiceBusMessage"/> instances to enqueue.</param>
 	/// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
 	/// <returns>A task representing the asynchronous enqueue operation.</returns>
 	/// <exception cref="ArgumentNullException">Thrown if <paramref name="transaction"/> or <paramref name="messages"/> is <c>null</c>.</exception>
-	/// <exception cref="ArgumentException">Thrown if <paramref name="destinationAggregate"/> is null or empty.</exception>
+	/// <exception cref="ArgumentException">Thrown if <paramref name="subject"/> is null or empty.</exception>
 	/// <exception cref="InvalidOperationException">Thrown if one or more messages are invalid.</exception>
 	/// <remarks>
 	/// Each message is validated during enqueueing to ensure it contains the required metadata and does not exceed the
@@ -109,15 +109,15 @@ public class SqlOutbox : IOutbox<ServiceBusMessage>
 	/// <seealso cref="OutboxSettings"/>
 	/// <seealso cref="ServiceBusMessage"/>
 	/// <seealso cref="SqlOutboxStore"/>
-	public async Task EnqueueAsync(DbTransaction transaction, string destinationAggregate, IEnumerable<ServiceBusMessage> messages, CancellationToken cancellationToken = default)
+	public async Task EnqueueAsync(DbTransaction transaction, string subject, IEnumerable<ServiceBusMessage> messages, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(transaction);
-		ArgumentException.ThrowIfNullOrEmpty(destinationAggregate);
+		ArgumentException.ThrowIfNullOrEmpty(subject);
 		ArgumentNullException.ThrowIfNull(messages);
 
 		using var bulkEnqueuingCommand = transaction.CreateBulkEnqueuingCommand();
 		using var dataReader = messages.Validate(_settings.MaxMessageSize)
-			.AsDataReader(destinationAggregate);
+			.AsDataReader(subject);
 		await bulkEnqueuingCommand.WriteToServerAsync(dataReader, cancellationToken);
 	}
 

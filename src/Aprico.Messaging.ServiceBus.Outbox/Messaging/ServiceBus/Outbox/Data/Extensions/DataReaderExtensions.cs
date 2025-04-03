@@ -24,8 +24,8 @@ namespace Aprico.Messaging.ServiceBus.Outbox.Data.Extensions;
 
 internal static class DataReaderExtensions
 {
-	internal static IDataReader AsDataReader(this IEnumerable<ServiceBusMessage> messages, string destinationAggregate)
+	internal static IDataReader AsDataReader(this IEnumerable<ServiceBusMessage> messages, string subject)
 	{
-		return new ServiceBusMessageDataReader(messages.GetEnumerator(), destinationAggregate);
+		return new ServiceBusMessageDataReader(messages.GetEnumerator(), subject);
 	}
 }

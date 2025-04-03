@@ -1,13 +1,13 @@
 #region Copyright & License
 
 // Copyright © 2024 - 2025 Aprico Consultants
-//
+// 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-//
+// 
 // http://www.apache.org/licenses/LICENSE-2.0
-//
+// 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,7 +26,7 @@ public class OutboxSettings
 {
 	/// <summary>The maximum number of messages that can be dequeued from the outbox and dispatched in a single operation.</summary>
 	/// <remarks>
-	/// <para>Each dequeue operation only retrieves messages associated with the same destination aggregate.</para>
+	/// <para>Each dequeue operation only retrieves messages pertaining to the same subject.</para>
 	/// <para>Defaults to <see cref="DEFAULT_MAX_DEQUEUE_COUNT"/>, i.e. <c>10</c>.</para>
 	/// </remarks>
 	public int MaxDequeueCount { get; set; } = DEFAULT_MAX_DEQUEUE_COUNT;
@@ -36,7 +36,7 @@ public class OutboxSettings
 	/// limit applies to the combined size of all messages in the operation.
 	/// </summary>
 	/// <remarks>
-	/// <para>Each dequeue operation only retrieves messages associated with the same destination aggregate.</para>
+	/// <para>Each dequeue operation only retrieves messages pertaining to the same subject.</para>
 	/// <para>Defaults to <see cref="DEFAULT_MAX_DEQUEUE_SIZE"/>, typically <c>256 KB</c> for a standard-tier Azure Service Bus queue.</para>
 	/// </remarks>
 	public int MaxDequeueSize { get; set; } = DEFAULT_MAX_DEQUEUE_SIZE;

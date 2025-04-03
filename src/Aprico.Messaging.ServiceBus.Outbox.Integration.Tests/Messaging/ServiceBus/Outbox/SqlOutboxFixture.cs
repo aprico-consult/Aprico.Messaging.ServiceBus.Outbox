@@ -19,10 +19,12 @@
 using System;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Aprico.AutoFixture.Xunit2;
 using Aprico.Messaging.ServiceBus.Dummies;
 using Aprico.Messaging.ServiceBus.Extensions;
+using Aprico.Messaging.ServiceBus.Outbox.Settings;
 using Aprico.Messaging.ServiceBus.Xml;
 using Aprico.Xunit;
 using AutoFixture.AutoMoq;
@@ -30,6 +32,7 @@ using Azure.Messaging.ServiceBus;
 
 namespace Aprico.Messaging.ServiceBus.Outbox;
 
+[Collection(nameof(OutboxTestDbFixture))]
 [SuppressMessage("Design", "CA1063:Implement IDisposable Correctly")]
 public class SqlOutboxFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
 {
@@ -55,7 +58,7 @@ public class SqlOutboxFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task EnqueueMultipleMessages(SqlOutbox sut, string destinationAggregate)
+	public async Task EnqueueMultipleMessages(SqlOutbox sut, string subject)
 	{
 		ServiceBusMessage[] messages = [
 			new ServiceBusMessageAssembler().Assemble(
@@ -68,53 +71,95 @@ public class SqlOutboxFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
 				})
 		];
 
-		await sut.EnqueueAsync(_transaction, destinationAggregate, messages);
+		await sut.EnqueueAsync(_transaction, subject, messages);
 		await _transaction.CommitAsync();
 
 		var row = _outboxTestDbFixture.SingleMessageRow(messages[0].MessageId);
-		row[nameof(Message.DestinationAggregate)]
+		row[nameof(Messages.Id)]
 			.Should()
-			.Be(destinationAggregate);
+			.Be(Guid.Parse(messages[0].MessageId));
+		row[nameof(Messages.Subject)]
+			.Should()
+			.Be(subject);
+		row[nameof(Messages.Headers)]
+			.Should() // @formatter:wrap_chained_method_calls chop_if_long
+			.Be(messages[0].ApplicationProperties.ToJson().ToString());
+		row[nameof(Messages.Body)]
+			.Should() //
+			.Be(messages[0].Body.ToString());
+		row[nameof(Messages.Timestamp)]
+			.Should() //
+			.Be(messages[0].GetTimestamp()); // @formatter:wrap_chained_method_calls restore
 
 		row = _outboxTestDbFixture.SingleMessageRow(messages[1].MessageId);
-		row[nameof(Message.DestinationAggregate)]
+		row[nameof(Messages.Subject)]
 			.Should()
-			.Be(destinationAggregate);
+			.Be(subject);
 	}
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task EnqueueSingleMessage(SqlOutbox sut, string destinationAggregate)
+	public async Task EnqueueMultipleMessagesThrowsForOverSizedMessage(SqlOutbox sut, string subject)
+	{
+		ServiceBusMessage[] messages = [
+			new ServiceBusMessageAssembler().Assemble(
+				new XmlDummy {
+					Name = RandomNumberGenerator.GetHexString(OutboxSettings.DEFAULT_MAX_MESSAGE_SIZE + 1024)
+				})
+		];
+
+		await Invoking(() => sut.EnqueueAsync(_transaction, subject, messages))
+			.Should()
+			.ThrowAsync<InvalidOperationException>();
+	}
+
+	[Theory]
+	[AutoData<AutoMoqCustomization>]
+	public async Task EnqueueSingleMessage(SqlOutbox sut, string subject)
 	{
 		var message = new ServiceBusMessageAssembler().Assemble(
 			new XmlDummy {
 				Name = $"{Guid.NewGuid():D}"
 			});
 
-		await sut.EnqueueAsync(_transaction, destinationAggregate, message);
+		await sut.EnqueueAsync(_transaction, subject, message);
 		await _transaction.CommitAsync();
 
 		var row = _outboxTestDbFixture.SingleMessageRow(message.MessageId);
 		row.ItemArray.Should()
 			.HaveCount(expected: 5); // because sql statement is select * from outbox.Messages
-		row[nameof(Message.Id)]
+		row[nameof(Messages.Id)]
 			.Should()
 			.Be(Guid.Parse(message.MessageId));
-		row[nameof(Message.DestinationAggregate)]
+		row[nameof(Messages.Subject)]
 			.Should()
-			.Be(destinationAggregate);
-		row[nameof(Message.Headers)]
+			.Be(subject);
+		row[nameof(Messages.Headers)]
 			.Should() // @formatter:wrap_chained_method_calls chop_if_long
 			.Be(message.ApplicationProperties.ToJson().ToString()); // @formatter:wrap_chained_method_calls restore
-		row[nameof(Message.Body)]
+		row[nameof(Messages.Body)]
 			.Should()
 			.Be(message.Body.ToString());
-		row[nameof(Message.Timestamp)]
+		row[nameof(Messages.Timestamp)]
 			.Should()
 			.Be(message.GetTimestamp());
 	}
 
+	[Theory]
+	[AutoData<AutoMoqCustomization>]
+	public async Task EnqueueSingleMessageThrowsForOverSizedMessage(SqlOutbox sut, string subject)
+	{
+		var message = new ServiceBusMessageAssembler().Assemble(
+			new XmlDummy {
+				Name = RandomNumberGenerator.GetHexString(OutboxSettings.DEFAULT_MAX_MESSAGE_SIZE + 1024)
+			});
+
+		await Invoking(() => sut.EnqueueAsync(_transaction, subject, message))
+			.Should()
+			.ThrowAsync<InvalidOperationException>();
+	}
+
 	private readonly OutboxTestDbFixture _outboxTestDbFixture;
-	private readonly DbTransaction _transaction;
 	private readonly DbConnection _connection;
+	private readonly DbTransaction _transaction;
 }

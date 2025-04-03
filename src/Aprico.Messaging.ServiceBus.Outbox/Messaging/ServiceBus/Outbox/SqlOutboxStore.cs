@@ -39,8 +39,8 @@ namespace Aprico.Messaging.ServiceBus.Outbox;
 /// of dequeued messages, as configured via <see cref="OutboxSettings"/>.
 /// </para>
 /// <para>
-/// Messages returned by this store are grouped by destination aggregate and are intended to be dispatched to the same Azure
-/// Service Bus queue.
+/// Messages returned by this store are grouped by subject and are intended to be dispatched to the same Azure Service Bus
+/// queue.
 /// </para>
 /// </remarks>
 /// <seealso cref="IOutboxStore{TMessage}"/>
@@ -65,15 +65,15 @@ public class SqlOutboxStore : IOutboxStore<ServiceBusMessage>
 	/// </param>
 	/// <param name="cancellationToken">A token that can be used to cancel the asynchronous operation.</param>
 	/// <returns>
-	/// A task that returns a tuple containing the name of the destination aggregate and the dequeued messages. If no messages
-	/// are available, the result is <c>default</c>.
+	/// A task representing the asynchronous dequeue operation, yielding a tuple with a subject and a collection of messages
+	/// pertaining to that subject. If no messages are available, the result is <c>default</c>.
 	/// </returns>
 	/// <exception cref="ArgumentNullException">Thrown if <paramref name="transaction"/> is <c>null</c>.</exception>
 	/// <exception cref="InvalidOperationException">Thrown if one or more messages are invalid.</exception>
 	/// <remarks>
 	/// <para>
-	/// This operation retrieves messages associated with a single destination aggregate. All messages are intended to be
-	/// dispatched to the same Azure Service Bus queue.
+	/// This operation retrieves messages pertaining to the same subject. All messages are intended to be dispatched to the same
+	/// Azure Service Bus queue.
 	/// </para>
 	/// <para>
 	/// Only messages whose combined header and body sizes, accumulated across the entire dequeued set, do not exceed the
@@ -82,36 +82,33 @@ public class SqlOutboxStore : IOutboxStore<ServiceBusMessage>
 	/// metadata and does not exceed the configured size limit.
 	/// </para>
 	/// </remarks>
-	public async Task<(string destinationAggregate, IEnumerable<ServiceBusMessage> messages)> DequeueAsync(
+	public async Task<(string Subject, IEnumerable<ServiceBusMessage> Messages)> DequeueAsync(
 		DbTransaction transaction,
-		int messageCount = OutboxSettings.DEFAULT_MAX_DEQUEUE_SIZE,
+		int messageCount = OutboxSettings.DEFAULT_MAX_DEQUEUE_COUNT,
 		CancellationToken cancellationToken = default)
 	{
+		// @formatter:wrap_chained_method_calls chop_if_long
 		async IAsyncEnumerable<ServiceBusMessage> BuildMessagesAsync(DbDataReader reader, [EnumeratorCancellation] CancellationToken enumCancellationToken)
 		{
 			do
 			{
-				// @formatter:wrap_chained_method_calls chop_if_long
 				var message = new ServiceBusMessage(reader.GetString(ordinal: 3)) {
 					MessageId = reader.GetGuid(ordinal: 1).ToString()
 				};
 				reader.GetString(ordinal: 2).ToDictionary().CopyContextPropertiesTo(message);
-				// @formatter:wrap_chained_method_calls restore
 				yield return message.Validate(_settings.MaxMessageSize);
 			} while (await reader.ReadAsync(enumCancellationToken));
 		}
 
 		ArgumentNullException.ThrowIfNull(transaction);
+
 		await using var cmd = transaction.CreateDequeuingCommand(_settings.MaxDequeueCount, _settings.MaxDequeueSize);
 		await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-		if (await reader.ReadAsync(cancellationToken))
-		{
-			var destinationAggregate = reader.GetString(ordinal: 0);
-			// @formatter:wrap_chained_method_calls chop_if_long
-			return (destinationAggregate, await BuildMessagesAsync(reader, cancellationToken).ToArrayAsync(cancellationToken));
-			// @formatter:wrap_chained_method_calls restore
-		}
-		return default;
+		if (!await reader.ReadAsync(cancellationToken)) return default;
+
+		var subject = reader.GetString(ordinal: 0);
+		return (subject, await BuildMessagesAsync(reader, cancellationToken).ToArrayAsync(cancellationToken));
+		// @formatter:wrap_chained_method_calls restore
 	}
 
 	#endregion

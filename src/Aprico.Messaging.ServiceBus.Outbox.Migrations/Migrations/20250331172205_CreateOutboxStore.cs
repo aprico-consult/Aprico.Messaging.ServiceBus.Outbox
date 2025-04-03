@@ -20,7 +20,7 @@ namespace Aprico.Migrations
 				columns: table => new
 				{
 					Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-					DestinationAggregate = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+					Subject = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
 					Headers = table.Column<string>(type: "nvarchar(max)", nullable: false),
 					Body = table.Column<string>(type: "nvarchar(max)", nullable: false),
 					Timestamp = table.Column<DateTimeOffset>(type: "datetimeoffset(7)", nullable: false)

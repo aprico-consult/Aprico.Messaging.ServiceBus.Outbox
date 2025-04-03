@@ -28,7 +28,9 @@ public class OutboxInstallerDbContextFactory : IDesignTimeDbContextFactory<Outbo
 	public OutboxInstallerDbContext CreateDbContext(string[] args)
 	{
 		var contextOptions = new DbContextOptionsBuilder<OutboxInstallerDbContext>();
-		contextOptions.UseSqlServer(static sqlServerOptions => sqlServerOptions.MigrationsAssembly(typeof(OutboxInstallerDbContextFactory).Assembly));
+		contextOptions.UseSqlServer(
+			static sqlServerOptions => sqlServerOptions.MigrationsHistoryTable("__EFMigrationsHistory_Outbox")
+				.MigrationsAssembly(typeof(OutboxInstallerDbContextFactory).Assembly));
 		return new OutboxInstallerDbContext(contextOptions.Options);
 	}
 

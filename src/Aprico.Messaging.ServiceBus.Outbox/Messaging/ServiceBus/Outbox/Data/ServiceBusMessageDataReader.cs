@@ -26,9 +26,9 @@ namespace Aprico.Messaging.ServiceBus.Outbox.Data;
 
 internal class ServiceBusMessageDataReader : EnumeratorDataReader<ServiceBusMessage>
 {
-	internal ServiceBusMessageDataReader(IEnumerator<ServiceBusMessage> source, string destinationAggregate) : base(source, FIELDS_COUNT)
+	internal ServiceBusMessageDataReader(IEnumerator<ServiceBusMessage> source, string subject) : base(source, FIELDS_COUNT)
 	{
-		_destinationAggregate = destinationAggregate;
+		_subject = subject;
 	}
 
 	#region Base Class Member Overrides
@@ -38,7 +38,7 @@ internal class ServiceBusMessageDataReader : EnumeratorDataReader<ServiceBusMess
 		// @formatter:wrap_chained_method_calls chop_if_long
 		return index switch {
 			0 => Guid.Parse(_source.Current.MessageId), // TODO !! fix inconsistencies: ServiceBusMessageAssembler expects a string but SQL outbox enforces a Guid
-			1 => _destinationAggregate,
+			1 => _subject,
 			2 => _source.Current.ApplicationProperties.ToJson().ToString(),
 			3 => _source.Current.Body.ToString(),
 			4 => _source.Current.GetTimestamp(),
@@ -50,5 +50,5 @@ internal class ServiceBusMessageDataReader : EnumeratorDataReader<ServiceBusMess
 	#endregion
 
 	private const int FIELDS_COUNT = 5;
-	private readonly string _destinationAggregate;
+	private readonly string _subject;
 }

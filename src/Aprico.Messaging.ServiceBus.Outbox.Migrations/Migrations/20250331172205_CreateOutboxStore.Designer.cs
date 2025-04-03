@@ -25,7 +25,7 @@ namespace Aprico.Migrations
 
 			SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-			modelBuilder.Entity("Aprico.Messaging.ServiceBus.Outbox.Message", b =>
+			modelBuilder.Entity("Aprico.Messaging.ServiceBus.Outbox.Messages", b =>
 			{
 				b.Property<Guid>("Id")
 					.ValueGeneratedOnAdd()
@@ -37,7 +37,7 @@ namespace Aprico.Migrations
 					.HasColumnType("nvarchar(max)")
 					.HasColumnOrder(4);
 
-				b.Property<string>("DestinationAggregate")
+				b.Property<string>("Subject")
 					.IsRequired()
 					.HasMaxLength(256)
 					.HasColumnType("nvarchar(256)")

@@ -23,15 +23,17 @@ namespace Aprico.Messaging.ServiceBus.Outbox;
 
 [SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix")]
 [SuppressMessage("ReSharper", "EntityFramework.ModelValidation.UnlimitedStringLength")]
-public class Message
+public class Messages
 {
 	public required string Body { get; init; }
-
-	public required string DestinationAggregate { get; init; }
 
 	public required string Headers { get; init; }
 
 	public required Guid Id { get; init; }
 
+	public required string Subject { get; init; }
+
 	public required DateTimeOffset Timestamp { get; init; }
+
+	public const string SCHEMA = "outbox";
 }
