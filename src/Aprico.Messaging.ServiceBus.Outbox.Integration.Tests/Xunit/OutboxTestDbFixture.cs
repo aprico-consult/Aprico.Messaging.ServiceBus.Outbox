@@ -24,6 +24,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using Aprico.Messaging.ServiceBus.Outbox;
+using Aprico.Messaging.ServiceBus.Outbox.Data.Extensions;
+using Azure.Messaging.ServiceBus;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.MsSql;
@@ -67,7 +69,7 @@ public sealed class OutboxTestDbFixture(IMessageSink messageSink) : DbContainerF
 		using var connection = new SqlConnection(_connectionString);
 		connection.Open();
 		var cmd = connection.CreateCommand();
-		cmd.CommandText = "DELETE FROM [outbox].[Messages]";
+		cmd.CommandText = $"DELETE FROM {MessageConfiguration.NAME_TABLE}";
 		cmd.ExecuteNonQuery();
 	}
 
@@ -76,11 +78,22 @@ public sealed class OutboxTestDbFixture(IMessageSink messageSink) : DbContainerF
 		return new SqlConnection(OutboxTestDbConnectionString);
 	}
 
+	internal async Task InsertMessage(string subject, ServiceBusMessage message)
+	{
+		await using var connection = CreateConnection();
+		await connection.OpenAsync();
+		await using var transaction = await connection.BeginTransactionAsync();
+		await using var command = transaction.CreateEnqueuingCommand(subject, message);
+		var affectedRowCount = await command.ExecuteNonQueryAsync();
+		if (affectedRowCount != 1) throw new InvalidOperationException($"{nameof(ServiceBusMessage)} enqueueing failure, {affectedRowCount} rows have been inserted.");
+		await transaction.CommitAsync();
+	}
+
 	internal DataRow SingleMessageRow(string messageId)
 	{
 		return SelectRows(
 				command => {
-					command.CommandText = "SELECT * FROM [outbox].[Messages] WHERE [Id] = @messageId";
+					command.CommandText = $"SELECT * FROM {MessageConfiguration.NAME_TABLE} WHERE [{nameof(Message.Id)}] = @messageId";
 					command.Parameters.AddWithValue("@messageId", messageId);
 				})
 			.Single();

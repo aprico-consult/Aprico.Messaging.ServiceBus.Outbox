@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -9,6 +10,7 @@ namespace Aprico.Migrations
 	public partial class CreateOutboxStore : Migration
 	{
 		/// <inheritdoc />
+		[SuppressMessage("ReSharper", "StringLiteralTypo")]
 		protected override void Up(MigrationBuilder migrationBuilder)
 		{
 			migrationBuilder.EnsureSchema(

@@ -5,6 +5,7 @@ using Aprico.Messaging.ServiceBus.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -12,10 +13,12 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Aprico.Migrations
 {
 	[DbContext(typeof(OutboxInstallerDbContext))]
-	partial class OutboxInstallerDbContextModelSnapshot : ModelSnapshot
+	[Migration("20250405103357_CreateOutboxStore")]
+	partial class CreateOutboxStore
 	{
+		/// <inheritdoc />
 		[SuppressMessage("ReSharper", "StringLiteralTypo")]
-		protected override void BuildModel(ModelBuilder modelBuilder)
+		protected override void BuildTargetModel(ModelBuilder modelBuilder)
 		{
 #pragma warning disable 612, 618
 			modelBuilder

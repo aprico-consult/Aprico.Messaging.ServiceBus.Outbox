@@ -88,14 +88,14 @@ public class SqlOutboxStore : IOutboxStore<ServiceBusMessage>
 		CancellationToken cancellationToken = default)
 	{
 		// @formatter:wrap_chained_method_calls chop_if_long
-		async IAsyncEnumerable<ServiceBusMessage> BuildMessagesAsync(DbDataReader reader, [EnumeratorCancellation] CancellationToken enumCancellationToken)
+		async IAsyncEnumerable<ServiceBusMessage> ExtractMessagesFromReader(DbDataReader reader, [EnumeratorCancellation] CancellationToken enumCancellationToken)
 		{
 			do
 			{
-				var message = new ServiceBusMessage(reader.GetString(ordinal: 3)) {
-					MessageId = reader.GetGuid(ordinal: 1).ToString()
+				var message = new ServiceBusMessage(reader.GetString(MessageConfiguration.COLUMN_ORDINAL_BODY)) {
+					MessageId = reader.GetGuid(MessageConfiguration.COLUMN_ORDINAL_ID).ToString()
 				};
-				reader.GetString(ordinal: 2).ToDictionary().CopyContextPropertiesTo(message);
+				reader.GetString(MessageConfiguration.COLUMN_ORDINAL_HEADERS).ToDictionary().CopyContextPropertiesTo(message);
 				yield return message.Validate(_settings.MaxMessageSize);
 			} while (await reader.ReadAsync(enumCancellationToken));
 		}
@@ -106,8 +106,8 @@ public class SqlOutboxStore : IOutboxStore<ServiceBusMessage>
 		await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 		if (!await reader.ReadAsync(cancellationToken)) return default;
 
-		var subject = reader.GetString(ordinal: 0);
-		return (subject, await BuildMessagesAsync(reader, cancellationToken).ToArrayAsync(cancellationToken));
+		var subject = reader.GetString(MessageConfiguration.COLUMN_ORDINAL_SUBJECT);
+		return (subject, await ExtractMessagesFromReader(reader, cancellationToken).ToArrayAsync(cancellationToken));
 		// @formatter:wrap_chained_method_calls restore
 	}
 

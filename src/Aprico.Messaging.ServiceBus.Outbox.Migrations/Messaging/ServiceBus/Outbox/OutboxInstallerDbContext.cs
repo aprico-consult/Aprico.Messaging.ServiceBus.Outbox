@@ -28,7 +28,7 @@ public class OutboxInstallerDbContext(DbContextOptions<OutboxInstallerDbContext>
 	[SuppressMessage("Design", "CA1062:Validate arguments of public methods")]
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
-		modelBuilder.ApplyConfigurationsFromAssembly(typeof(MessagesConfiguration).Assembly);
+		modelBuilder.ApplyConfigurationsFromAssembly(typeof(MessageConfiguration).Assembly);
 	}
 
 	#endregion

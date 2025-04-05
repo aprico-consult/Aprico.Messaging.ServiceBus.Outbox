@@ -75,24 +75,24 @@ public class SqlOutboxFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
 		await _transaction.CommitAsync();
 
 		var row = _outboxTestDbFixture.SingleMessageRow(messages[0].MessageId);
-		row[nameof(Messages.Id)]
+		row[nameof(Message.Id)]
 			.Should()
 			.Be(Guid.Parse(messages[0].MessageId));
-		row[nameof(Messages.Subject)]
+		row[nameof(Message.Subject)]
 			.Should()
 			.Be(subject);
-		row[nameof(Messages.Headers)]
+		row[nameof(Message.Headers)]
 			.Should() // @formatter:wrap_chained_method_calls chop_if_long
 			.Be(messages[0].ApplicationProperties.ToJson().ToString());
-		row[nameof(Messages.Body)]
+		row[nameof(Message.Body)]
 			.Should() //
 			.Be(messages[0].Body.ToString());
-		row[nameof(Messages.Timestamp)]
+		row[nameof(Message.Timestamp)]
 			.Should() //
 			.Be(messages[0].GetTimestamp()); // @formatter:wrap_chained_method_calls restore
 
 		row = _outboxTestDbFixture.SingleMessageRow(messages[1].MessageId);
-		row[nameof(Messages.Subject)]
+		row[nameof(Message.Subject)]
 			.Should()
 			.Be(subject);
 	}
@@ -128,19 +128,19 @@ public class SqlOutboxFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
 		var row = _outboxTestDbFixture.SingleMessageRow(message.MessageId);
 		row.ItemArray.Should()
 			.HaveCount(expected: 5); // because sql statement is select * from outbox.Messages
-		row[nameof(Messages.Id)]
+		row[nameof(Message.Id)]
 			.Should()
 			.Be(Guid.Parse(message.MessageId));
-		row[nameof(Messages.Subject)]
+		row[nameof(Message.Subject)]
 			.Should()
 			.Be(subject);
-		row[nameof(Messages.Headers)]
+		row[nameof(Message.Headers)]
 			.Should() // @formatter:wrap_chained_method_calls chop_if_long
 			.Be(message.ApplicationProperties.ToJson().ToString()); // @formatter:wrap_chained_method_calls restore
-		row[nameof(Messages.Body)]
+		row[nameof(Message.Body)]
 			.Should()
 			.Be(message.Body.ToString());
-		row[nameof(Messages.Timestamp)]
+		row[nameof(Message.Timestamp)]
 			.Should()
 			.Be(message.GetTimestamp());
 	}
