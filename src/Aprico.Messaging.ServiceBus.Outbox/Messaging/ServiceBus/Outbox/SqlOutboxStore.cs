@@ -60,8 +60,9 @@ public class SqlOutboxStore : IOutboxStore<ServiceBusMessage>
 	/// <summary>Dequeues a collection of <see cref="ServiceBusMessage"/> instances from the SQL Server–backed outbox store.</summary>
 	/// <param name="transaction">The active database transaction used for the dequeue operation.</param>
 	/// <param name="messageCount">
-	/// The maximum number of messages to retrieve. Defaults to <see cref="OutboxSettings.MaxDequeueCount"/>
-	/// .
+	/// Specifies the maximum number of messages to dequeue. If not provided, or if set to a value less than
+	/// or equal to zero, the value defaults to <see cref="OutboxSettings.MaxDequeueCount"/> from the constructor-injected
+	/// <see cref="OutboxSettings"/> instance, which in turn defaults to <see cref="OutboxSettings.DEFAULT_MAX_DEQUEUE_COUNT"/>.
 	/// </param>
 	/// <param name="cancellationToken">A token that can be used to cancel the asynchronous operation.</param>
 	/// <returns>
@@ -82,10 +83,7 @@ public class SqlOutboxStore : IOutboxStore<ServiceBusMessage>
 	/// metadata and does not exceed the configured size limit.
 	/// </para>
 	/// </remarks>
-	public async Task<(string Subject, IEnumerable<ServiceBusMessage> Messages)> DequeueAsync(
-		DbTransaction transaction,
-		int messageCount = OutboxSettings.DEFAULT_MAX_DEQUEUE_COUNT,
-		CancellationToken cancellationToken = default)
+	public async Task<(string Subject, IEnumerable<ServiceBusMessage> Messages)> DequeueAsync(DbTransaction transaction, int messageCount = 0, CancellationToken cancellationToken = default)
 	{
 		// @formatter:wrap_chained_method_calls chop_if_long
 		async IAsyncEnumerable<ServiceBusMessage> ExtractMessagesFromReader(DbDataReader reader, [EnumeratorCancellation] CancellationToken enumCancellationToken)
@@ -102,10 +100,12 @@ public class SqlOutboxStore : IOutboxStore<ServiceBusMessage>
 
 		ArgumentNullException.ThrowIfNull(transaction);
 
-		await using var cmd = transaction.CreateDequeuingCommand(_settings.MaxDequeueCount, _settings.MaxDequeueSize);
+		var maxDequeueCount = messageCount > 0
+			? messageCount
+			: _settings.MaxDequeueCount;
+		await using var cmd = transaction.CreateDequeuingCommand(maxDequeueCount, _settings.MaxDequeueSize);
 		await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-		if (!await reader.ReadAsync(cancellationToken)) return default;
-
+		if (!await reader.ReadAsync(cancellationToken)) return (string.Empty, []);
 		var subject = reader.GetString(MessageConfiguration.COLUMN_ORDINAL_SUBJECT);
 		return (subject, await ExtractMessagesFromReader(reader, cancellationToken).ToArrayAsync(cancellationToken));
 		// @formatter:wrap_chained_method_calls restore

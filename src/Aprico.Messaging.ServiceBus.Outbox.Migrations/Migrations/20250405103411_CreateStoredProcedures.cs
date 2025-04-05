@@ -60,8 +60,8 @@ BEGIN
    )
    DELETE FROM M
    OUTPUT
-      DELETED.[{nameof(Message.Subject)}],
       DELETED.[{nameof(Message.Id)}],
+      DELETED.[{nameof(Message.Subject)}],
       DELETED.[{nameof(Message.Headers)}],
       DELETED.[{nameof(Message.Body)}],
       DELETED.[{nameof(Message.Timestamp)}]
