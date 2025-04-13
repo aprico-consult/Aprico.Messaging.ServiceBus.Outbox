@@ -22,6 +22,7 @@ namespace Aprico.Messaging.ServiceBus.Outbox.Settings;
 
 /// <summary>Configuration settings for the transactional outbox.</summary>
 [SuppressMessage("ReSharper", "MemberCanBeInternal", Justification = "Public API.")]
+[SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global", Justification = "Public API.")]
 public class OutboxSettings
 {
 	/// <summary>The maximum number of messages that can be dequeued from the outbox and dispatched in a single operation.</summary>

@@ -1,13 +1,13 @@
 #region Copyright & License
 
 // Copyright © 2024 - 2025 Aprico Consultants
-//
+// 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-//
+// 
 // http://www.apache.org/licenses/LICENSE-2.0
-//
+// 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,11 +34,11 @@ namespace Aprico.Messaging.ServiceBus.Outbox;
 
 [Collection(nameof(OutboxTestDbFixture))]
 [SuppressMessage("Design", "CA1063:Implement IDisposable Correctly")]
-public class SqlOutboxFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
+public class SqlOutboxWriterFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
 {
 	#region Setup/Teardown
 
-	public SqlOutboxFixture(OutboxTestDbFixture outboxTestDbFixture)
+	public SqlOutboxWriterFixture(OutboxTestDbFixture outboxTestDbFixture)
 	{
 		_outboxTestDbFixture = outboxTestDbFixture;
 		_connection = _outboxTestDbFixture.CreateConnection();
@@ -58,7 +58,7 @@ public class SqlOutboxFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task EnqueueMultipleMessages(SqlOutbox sut, string subject)
+	public async Task EnqueueMultipleMessages(SqlOutboxWriter sut, string subject)
 	{
 		ServiceBusMessage[] messages = [
 			new ServiceBusMessageAssembler().Assemble(
@@ -99,7 +99,7 @@ public class SqlOutboxFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task EnqueueMultipleMessagesThrowsForOverSizedMessage(SqlOutbox sut, string subject)
+	public async Task EnqueueMultipleMessagesThrowsForOverSizedMessage(SqlOutboxWriter sut, string subject)
 	{
 		ServiceBusMessage[] messages = [
 			new ServiceBusMessageAssembler().Assemble(
@@ -115,7 +115,7 @@ public class SqlOutboxFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task EnqueueSingleMessage(SqlOutbox sut, string subject)
+	public async Task EnqueueSingleMessage(SqlOutboxWriter sut, string subject)
 	{
 		var message = new ServiceBusMessageAssembler().Assemble(
 			new XmlDummy {
@@ -147,7 +147,7 @@ public class SqlOutboxFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task EnqueueSingleMessageThrowsForOverSizedMessage(SqlOutbox sut, string subject)
+	public async Task EnqueueSingleMessageThrowsForOverSizedMessage(SqlOutboxWriter sut, string subject)
 	{
 		var message = new ServiceBusMessageAssembler().Assemble(
 			new XmlDummy {

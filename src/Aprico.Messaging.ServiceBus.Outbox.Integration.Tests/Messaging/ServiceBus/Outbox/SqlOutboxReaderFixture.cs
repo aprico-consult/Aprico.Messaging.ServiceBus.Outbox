@@ -28,16 +28,17 @@ using Aprico.Messaging.ServiceBus.Outbox.Settings;
 using Aprico.Messaging.ServiceBus.Xml;
 using Aprico.Xunit;
 using AutoFixture.AutoMoq;
+using Microsoft.Extensions.Options;
 
 namespace Aprico.Messaging.ServiceBus.Outbox;
 
 [Collection(nameof(OutboxTestDbFixture))]
 [SuppressMessage("Design", "CA1063:Implement IDisposable Correctly")]
-public class SqlOutboxStoreFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
+public class SqlOutboxReaderFixture : IClassFixture<OutboxTestDbFixture>, IDisposable
 {
 	#region Setup/Teardown
 
-	public SqlOutboxStoreFixture(OutboxTestDbFixture outboxTestDbFixture)
+	public SqlOutboxReaderFixture(OutboxTestDbFixture outboxTestDbFixture)
 	{
 		_outboxTestDbFixture = outboxTestDbFixture;
 		_connection = _outboxTestDbFixture.CreateConnection();
@@ -57,7 +58,7 @@ public class SqlOutboxStoreFixture : IClassFixture<OutboxTestDbFixture>, IDispos
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task DequeueMessagesByOldestSubject(SqlOutboxStore sut, string oldestSubject, string newestSubject)
+	public async Task DequeueMessagesByOldestSubject(SqlOutboxReader sut, string oldestSubject, string newestSubject)
 	{
 		var newestMessage = new ServiceBusMessageAssembler().Assemble(
 			new XmlDummy {
@@ -85,7 +86,7 @@ public class SqlOutboxStoreFixture : IClassFixture<OutboxTestDbFixture>, IDispos
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task DequeueMessagesByOldestSubjectButSkipOverSizedMessage(SqlOutboxStore sut, string oldestSubject, string newestSubject)
+	public async Task DequeueMessagesByOldestSubjectButSkipOverSizedMessage(SqlOutboxReader sut, string oldestSubject, string newestSubject)
 	{
 		var newestMessage = new ServiceBusMessageAssembler().Assemble(
 			new XmlDummy {
@@ -113,7 +114,7 @@ public class SqlOutboxStoreFixture : IClassFixture<OutboxTestDbFixture>, IDispos
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task DequeueReturnsEmptyWhenStoreIsEmpty(SqlOutboxStore sut)
+	public async Task DequeueReturnsEmptyWhenStoreIsEmpty(SqlOutboxReader sut)
 	{
 		var dequeueResult = await sut.DequeueAsync(_transaction);
 
@@ -129,7 +130,7 @@ public class SqlOutboxStoreFixture : IClassFixture<OutboxTestDbFixture>, IDispos
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task DequeueReturnsMessagesUpToDefaultMessageCount(SqlOutboxStore sut, string subject)
+	public async Task DequeueReturnsMessagesUpToDefaultMessageCount(SqlOutboxReader sut, string subject)
 	{
 		for (var i = 0; i < OutboxSettings.DEFAULT_MAX_DEQUEUE_COUNT + 1; i++)
 		{
@@ -150,7 +151,7 @@ public class SqlOutboxStoreFixture : IClassFixture<OutboxTestDbFixture>, IDispos
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task DequeueReturnsMessagesUpToMaxDequeueSize(SqlOutboxStore sut, string subject)
+	public async Task DequeueReturnsMessagesUpToMaxDequeueSize(SqlOutboxReader sut, string subject)
 	{
 		const int PAYLOAD_SPLIT_FACTOR = 3;
 		for (var i = 0; i < PAYLOAD_SPLIT_FACTOR; i++)
@@ -178,9 +179,10 @@ public class SqlOutboxStoreFixture : IClassFixture<OutboxTestDbFixture>, IDispos
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task DequeueReturnsMessagesUpToMessageCount(SqlOutboxStore sut, string subject)
+	public async Task DequeueReturnsMessagesUpToMessageCount(IOptions<OutboxSettings> settings, string subject)
 	{
-		const int MESSAGE_COUNT = 5;
+		settings.Value.MaxDequeueCount = 5;
+		var sut = new SqlOutboxReader(settings);
 		for (var i = 0; i < 9; i++)
 		{
 			var message = new ServiceBusMessageAssembler().Assemble(
@@ -190,17 +192,17 @@ public class SqlOutboxStoreFixture : IClassFixture<OutboxTestDbFixture>, IDispos
 			await _outboxTestDbFixture.InsertMessage(subject, message);
 		}
 
-		var (dequeuedSubject, dequeuedMessages) = await sut.DequeueAsync(_transaction, MESSAGE_COUNT);
+		var (dequeuedSubject, dequeuedMessages) = await sut.DequeueAsync(_transaction);
 
 		dequeuedSubject.Should()
 			.Be(subject);
 		dequeuedMessages.Should()
-			.HaveCount(MESSAGE_COUNT);
+			.HaveCount(settings.Value.MaxDequeueCount);
 	}
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task DequeueReturnsMessageWithRightProperties(SqlOutboxStore sut, string subject)
+	public async Task DequeueReturnsMessageWithRightProperties(SqlOutboxReader sut, string subject)
 	{
 		var originalMessage = new ServiceBusMessageAssembler().Assemble(
 			new XmlDummy {
@@ -236,7 +238,7 @@ similar to an email subject line. The mapped AMQP property is "subject".
 
 	[Theory]
 	[AutoData<AutoMoqCustomization>]
-	public async Task DequeueSkipsOverSizedMessages(SqlOutboxStore sut, string subject)
+	public async Task DequeueSkipsOverSizedMessages(SqlOutboxReader sut, string subject)
 	{
 		var message = new ServiceBusMessageAssembler().Assemble(
 			new XmlDummy {

@@ -1,13 +1,13 @@
 #region Copyright & License
 
 // Copyright © 2024 - 2025 Aprico Consultants
-//
+// 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-//
+// 
 // http://www.apache.org/licenses/LICENSE-2.0
-//
+// 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@ using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
+using Aprico.Messaging.Outbox;
 using Aprico.Messaging.ServiceBus.Extensions;
 using Aprico.Messaging.ServiceBus.Outbox.Data.Extensions;
 using Aprico.Messaging.ServiceBus.Outbox.Settings;
@@ -46,20 +47,20 @@ namespace Aprico.Messaging.ServiceBus.Outbox;
 /// delivery service via the messaging broker.
 /// </para>
 /// </remarks>
-/// <seealso cref="IOutbox{TMessage}"/>
+/// <seealso cref="IOutboxWriter{TMessage}"/>
 /// <seealso cref="OutboxSettings"/>
 /// <seealso cref="ServiceBusMessage"/>
-/// <seealso cref="SqlOutboxStore"/>
+/// <seealso cref="SqlOutboxReader"/>
 [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global", Justification = "Public API.")]
-public class SqlOutbox : IOutbox<ServiceBusMessage>
+public class SqlOutboxWriter : IOutboxWriter<ServiceBusMessage>
 {
-	public SqlOutbox(IOptions<OutboxSettings> settings)
+	public SqlOutboxWriter(IOptions<OutboxSettings> settings)
 	{
 		ArgumentNullException.ThrowIfNull(settings);
 		_settings = settings.Value;
 	}
 
-	#region IOutbox<ServiceBusMessage> Members
+	#region IOutboxWriter<ServiceBusMessage> Members
 
 	/// <summary>Enqueues a single <see cref="ServiceBusMessage"/> into the outbox as part of the specified database transaction.</summary>
 	/// <param name="transaction">The database transaction that the enqueue operation will participate in.</param>
@@ -74,10 +75,10 @@ public class SqlOutbox : IOutbox<ServiceBusMessage>
 	/// The message is validated during enqueueing to ensure it contains the required metadata and does not exceed the
 	/// configured size limit.
 	/// </remarks>
-	/// <seealso cref="IOutbox{TMessage}"/>
+	/// <seealso cref="IOutboxWriter{TMessage}"/>
 	/// <seealso cref="OutboxSettings"/>
 	/// <seealso cref="ServiceBusMessage"/>
-	/// <seealso cref="SqlOutboxStore"/>
+	/// <seealso cref="SqlOutboxReader"/>
 	public async Task EnqueueAsync(DbTransaction transaction, string subject, ServiceBusMessage message, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(transaction);
@@ -105,10 +106,10 @@ public class SqlOutbox : IOutbox<ServiceBusMessage>
 	/// Each message is validated during enqueueing to ensure it contains the required metadata and does not exceed the
 	/// configured size limit.
 	/// </remarks>
-	/// <seealso cref="IOutbox{TMessage}"/>
+	/// <seealso cref="IOutboxWriter{TMessage}"/>
 	/// <seealso cref="OutboxSettings"/>
 	/// <seealso cref="ServiceBusMessage"/>
-	/// <seealso cref="SqlOutboxStore"/>
+	/// <seealso cref="SqlOutboxReader"/>
 	public async Task EnqueueAsync(DbTransaction transaction, string subject, IEnumerable<ServiceBusMessage> messages, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(transaction);
